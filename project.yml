@@ -1,0 +1,74 @@
+name: TyphoonWatch
+options:
+  bundleIdPrefix: com.tokyonasu
+  deploymentTarget:
+    iOS: "17.0"
+  xcodeVersion: "16.0"
+
+settings:
+  base:
+    SWIFT_VERSION: "5.9"
+    MARKETING_VERSION: "1.0"
+    CURRENT_PROJECT_VERSION: "1"
+    CODE_SIGN_STYLE: Automatic
+    DEVELOPMENT_TEAM: 83VGKGSQUH
+
+targets:
+  TyphoonWatch:
+    type: application
+    platform: iOS
+    deploymentTarget: "17.0"
+    sources:
+      - TyphoonWatch
+    settings:
+      base:
+        PRODUCT_NAME: TyphoonWatch
+        PRODUCT_BUNDLE_IDENTIFIER: com.tokyonasu.typhoonwatch
+        TARGETED_DEVICE_FAMILY: "1,2"
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+        INFOPLIST_FILE: TyphoonWatch/Resources/Info.plist
+    info:
+      path: TyphoonWatch/Resources/Info.plist
+      properties:
+        CFBundleDisplayName: "台風を観測"
+        CFBundleShortVersionString: "$(MARKETING_VERSION)"
+        CFBundleVersion: "$(CURRENT_PROJECT_VERSION)"
+        LSRequiresIPhoneOS: true
+        LSApplicationCategoryType: public.app-category.weather
+        ITSAppUsesNonExemptEncryption: false
+        UILaunchScreen:
+          UIColorName: ""
+        UISupportedInterfaceOrientations:
+          - UIInterfaceOrientationPortrait
+        UISupportedInterfaceOrientations~ipad:
+          - UIInterfaceOrientationPortrait
+          - UIInterfaceOrientationPortraitUpsideDown
+          - UIInterfaceOrientationLandscapeLeft
+          - UIInterfaceOrientationLandscapeRight
+        UIUserInterfaceStyle: Dark
+    scheme:
+      testTargets:
+        - TyphoonWatchTests
+        - TyphoonWatchUITests
+  TyphoonWatchTests:
+    type: bundle.unit-test
+    platform: iOS
+    deploymentTarget: "17.0"
+    sources:
+      - TyphoonWatchTests
+    dependencies:
+      - target: TyphoonWatch
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.tokyonasu.typhoonwatch.tests
+  TyphoonWatchUITests:
+    type: bundle.ui-testing
+    platform: iOS
+    deploymentTarget: "17.0"
+    sources:
+      - TyphoonWatchUITests
+    dependencies:
+      - target: TyphoonWatch
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.tokyonasu.typhoonwatch.uitests
