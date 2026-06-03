@@ -1,4 +1,78 @@
 import Foundation
+import SwiftUI
+
+// MARK: - Color extension (shared)
+
+extension Color {
+    init(hex: UInt, alpha: Double = 1) {
+        self.init(
+            .sRGB,
+            red: Double((hex >> 16) & 0xff) / 255,
+            green: Double((hex >> 8) & 0xff) / 255,
+            blue: Double(hex & 0xff) / 255,
+            opacity: alpha
+        )
+    }
+}
+
+// MARK: - Bilingual helpers
+
+enum Lang {
+    static var isJapanese: Bool {
+        Locale.preferredLanguages.first?.hasPrefix("ja") ?? false
+    }
+    static func pick(_ ja: String, _ en: String) -> String {
+        isJapanese ? ja : en
+    }
+}
+
+// MARK: - Typhoon intensity
+
+enum TyphoonIntensity {
+    case tropicalDepression  // wind < 34 kt
+    case tropicalStorm       // 34-63 kt
+    case typhoon             // 64-99 kt
+    case superTyphoon        // >= 100 kt
+
+    static func from(wind: Int?) -> TyphoonIntensity {
+        guard let w = wind else { return .tropicalDepression }
+        if w >= 100 { return .superTyphoon }
+        if w >= 64  { return .typhoon }
+        if w >= 34  { return .tropicalStorm }
+        return .tropicalDepression
+    }
+
+    var color: Color {
+        switch self {
+        case .tropicalDepression: return Color(hex: 0x4CAF50)   // green
+        case .tropicalStorm:      return Color(hex: 0xF2B84B)   // yellow
+        case .typhoon:            return Color(hex: 0xFF9800)   // orange
+        case .superTyphoon:       return Color(hex: 0xFF3B30)   // red
+        }
+    }
+
+    var labelJa: String {
+        switch self {
+        case .tropicalDepression: return "熱帯低気圧"
+        case .tropicalStorm:      return "熱帯暴風雨"
+        case .typhoon:            return "台風"
+        case .superTyphoon:       return "猛烈な台風"
+        }
+    }
+
+    var labelEn: String {
+        switch self {
+        case .tropicalDepression: return "TD"
+        case .tropicalStorm:      return "TS"
+        case .typhoon:            return "TY"
+        case .superTyphoon:       return "Super TY"
+        }
+    }
+
+    var label: String { Lang.pick(labelJa, labelEn) }
+}
+
+// MARK: - Core models
 
 struct MonitorRegion: Identifiable, Hashable {
     let id: String
@@ -15,6 +89,8 @@ struct TyphoonPoint: Identifiable, Hashable {
     let pressure: Int?
     let wind: Int?
     let isForecast: Bool
+
+    var intensity: TyphoonIntensity { TyphoonIntensity.from(wind: wind) }
 }
 
 struct TyphoonStorm: Identifiable, Hashable {

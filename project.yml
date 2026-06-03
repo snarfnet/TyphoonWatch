@@ -36,6 +36,7 @@ targets:
         LSRequiresIPhoneOS: true
         LSApplicationCategoryType: public.app-category.weather
         ITSAppUsesNonExemptEncryption: false
+        NSLocationWhenInUseUsageDescription: "現在地の天気予報を表示するために位置情報を使用します。 / Your location is used to show local weather forecast."
         UILaunchScreen:
           UIColorName: ""
         UISupportedInterfaceOrientations:

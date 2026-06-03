@@ -4,6 +4,30 @@ struct ContentView: View {
     @StateObject private var model = TyphoonViewModel()
 
     var body: some View {
+        TabView {
+            typhoonTab
+                .tabItem {
+                    Label(
+                        Lang.pick("台風", "Typhoon"),
+                        systemImage: "hurricane"
+                    )
+                }
+
+            WeatherTab()
+                .tabItem {
+                    Label(
+                        Lang.pick("天気予報", "Weather"),
+                        systemImage: "cloud.sun.fill"
+                    )
+                }
+        }
+        .tint(.cyan)
+        .preferredColorScheme(.dark)
+    }
+
+    // MARK: - Typhoon tab
+
+    private var typhoonTab: some View {
         NavigationStack {
             GeometryReader { proxy in
                 let safeWidth = max(1, proxy.size.width - proxy.safeAreaInsets.leading - proxy.safeAreaInsets.trailing)
@@ -47,7 +71,6 @@ struct ContentView: View {
                 await model.refresh()
             }
         }
-        .tint(.cyan)
     }
 
     private func header(_ metrics: LayoutMetrics) -> some View {
@@ -110,7 +133,7 @@ struct ContentView: View {
         CompactPanel(metrics: metrics) {
             VStack(alignment: .leading, spacing: metrics.innerSpacing) {
                 VStack(alignment: .leading, spacing: 6) {
-                    Text("現在の判断")
+                    Text(Lang.pick("現在の判断", "Current Assessment"))
                         .font(.caption.weight(.bold))
                         .foregroundStyle(.cyan.opacity(0.9))
                     VStack(alignment: .leading, spacing: 6) {
@@ -137,7 +160,7 @@ struct ContentView: View {
                 }
 
                 Menu {
-                    Picker("地域を選択", selection: $model.selectedRegion) {
+                    Picker(Lang.pick("地域を選択", "Select Region"), selection: $model.selectedRegion) {
                         ForEach(AppData.regions) { region in
                             Text(region.name).tag(region)
                         }
@@ -153,7 +176,7 @@ struct ContentView: View {
                             .layoutPriority(1)
                         Spacer(minLength: 0)
                         if !metrics.isNarrow {
-                            Text("変更")
+                            Text(Lang.pick("変更", "Change"))
                                 .font(.caption2.weight(.black))
                                 .foregroundStyle(.white.opacity(0.66))
                         }
@@ -199,10 +222,23 @@ struct ContentView: View {
                 .accessibilityLabel("リスク目安 \(Int(min(model.risk.score, 100).rounded()))パーセント")
 
                 LazyVGrid(columns: metrics.metricColumns, spacing: 8) {
-                    MetricTile(title: "最接近", value: model.risk.closestAt?.compactTime ?? "不明")
-                    MetricTile(title: "最短距離", value: "\(Int(model.risk.closestKm.rounded())) km")
-                    MetricTile(title: "最大風速", value: model.risk.maxWind.map { "\($0) kt" } ?? "不明")
-                    MetricTile(title: "データ", value: model.statusText)
+                    MetricTile(
+                        title: Lang.pick("最接近", "Closest"),
+                        value: model.risk.closestAt?.compactTime ?? Lang.pick("不明", "N/A")
+                    )
+                    MetricTile(
+                        title: Lang.pick("最短距離", "Distance"),
+                        value: "\(Int(model.risk.closestKm.rounded())) km"
+                    )
+                    MetricTile(
+                        title: Lang.pick("最大風速", "Max Wind"),
+                        value: model.risk.maxWind.map { "\($0) kt" } ?? Lang.pick("不明", "N/A"),
+                        helpTopic: .windSpeed
+                    )
+                    MetricTile(
+                        title: Lang.pick("データ", "Source"),
+                        value: model.statusText
+                    )
                 }
             }
         }
@@ -211,24 +247,35 @@ struct ContentView: View {
     private func trackCard(_ metrics: LayoutMetrics) -> some View {
         CompactPanel(metrics: metrics) {
             VStack(alignment: .leading, spacing: 10) {
-                VStack(alignment: .leading, spacing: 3) {
-                    Label("進路", systemImage: "scope")
+                // Header with help toggle
+                HStack(alignment: .top) {
+                    VStack(alignment: .leading, spacing: 3) {
+                        Label(
+                            Lang.pick("進路", "Track"),
+                            systemImage: "scope"
+                        )
                         .font(.headline.weight(.black))
                         .lineLimit(1)
                         .minimumScaleFactor(0.8)
-                    Text(model.storm.source)
-                        .font(.caption2.weight(.bold))
-                        .foregroundStyle(.white.opacity(0.64))
-                        .lineLimit(1)
-                        .minimumScaleFactor(0.72)
+                        Text(model.storm.source)
+                            .font(.caption2.weight(.bold))
+                            .foregroundStyle(.white.opacity(0.64))
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.72)
+                    }
+                    .foregroundStyle(.white)
+                    Spacer(minLength: 6)
+                    HelpButton(topic: .trackMap)
                 }
-                .foregroundStyle(.white)
 
                 TrackMap(points: model.storm.points, region: model.selectedRegion)
                     .frame(height: metrics.mapHeight)
                     .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
-                    .accessibilityLabel("台風の進路図")
+                    .accessibilityLabel(Lang.pick("台風の進路図", "Typhoon track map"))
                     .accessibilityIdentifier("typhoonTrackMap")
+
+                // Legend card
+                TrackLegendView(metrics: metrics)
 
                 VStack(spacing: 7) {
                     ForEach(model.risk.actions, id: \.self) { action in
@@ -251,9 +298,16 @@ struct ContentView: View {
     private func feedStrip(_ metrics: LayoutMetrics) -> some View {
         CompactPanel(metrics: metrics) {
             VStack(alignment: .leading, spacing: 10) {
-                Label("データ元", systemImage: "antenna.radiowaves.left.and.right")
+                HStack {
+                    Label(
+                        Lang.pick("データ元", "Data Sources"),
+                        systemImage: "antenna.radiowaves.left.and.right"
+                    )
                     .font(.headline.weight(.black))
                     .foregroundStyle(.white)
+                    Spacer(minLength: 6)
+                    HelpButton(topic: .categories)
+                }
 
                 VStack(spacing: 8) {
                     ForEach(Array(AppData.feeds.prefix(metrics.feedLimit).enumerated()), id: \.element.id) { index, feed in
@@ -309,9 +363,16 @@ struct ContentView: View {
     private func timelineCard(_ metrics: LayoutMetrics) -> some View {
         CompactPanel(metrics: metrics) {
             VStack(alignment: .leading, spacing: 10) {
-                Label("観測リスト", systemImage: "list.bullet.rectangle")
+                HStack {
+                    Label(
+                        Lang.pick("観測リスト", "Observation List"),
+                        systemImage: "list.bullet.rectangle"
+                    )
                     .font(.headline.weight(.black))
                     .foregroundStyle(.white)
+                    Spacer(minLength: 6)
+                    HelpButton(topic: .pressure)
+                }
 
                 ForEach(model.storm.points.suffix(metrics.timelineLimit)) { point in
                     timelineRow(point, metrics: metrics)
@@ -321,21 +382,32 @@ struct ContentView: View {
     }
 
     private func timelineRow(_ point: TyphoonPoint, metrics: LayoutMetrics) -> some View {
-        VStack(alignment: .leading, spacing: 6) {
+        let intensityColor = point.intensity.color
+        return VStack(alignment: .leading, spacing: 6) {
             HStack(spacing: 8) {
+                // Intensity dot
+                Circle()
+                    .fill(intensityColor)
+                    .frame(width: 8, height: 8)
+
                 Text(point.time.compactTime)
                     .font(.caption.weight(.bold))
                     .lineLimit(1)
                     .minimumScaleFactor(0.78)
 
                 if point.isForecast {
-                    Text("予報")
+                    Text(Lang.pick("予報", "Fcst"))
                         .font(.caption2.weight(.black))
                         .padding(.horizontal, 7)
                         .padding(.vertical, 3)
                         .background(Color(hex: 0xF2B84B).opacity(0.22), in: Capsule())
                         .foregroundStyle(Color(hex: 0xF2B84B))
                 }
+
+                Text(point.intensity.label)
+                    .font(.caption2.weight(.bold))
+                    .foregroundStyle(intensityColor)
+                    .lineLimit(1)
 
                 Spacer(minLength: 0)
             }
@@ -351,12 +423,13 @@ struct ContentView: View {
                     HStack(spacing: 10) {
                         Text("\(point.pressure.map(String.init) ?? "--") hPa")
                             .font(.caption.weight(.bold))
+                            .foregroundStyle(.white.opacity(0.85))
                             .lineLimit(1)
                             .minimumScaleFactor(0.78)
 
                         Text("\(point.wind.map(String.init) ?? "--") kt")
                             .font(.caption.weight(.bold))
-                            .foregroundStyle(.cyan.opacity(0.9))
+                            .foregroundStyle(intensityColor)
                             .lineLimit(1)
                             .minimumScaleFactor(0.78)
                     }
@@ -373,12 +446,13 @@ struct ContentView: View {
 
                     Text("\(point.pressure.map(String.init) ?? "--") hPa")
                         .font(.caption.weight(.bold))
+                        .foregroundStyle(.white.opacity(0.85))
                         .lineLimit(1)
                         .minimumScaleFactor(0.78)
 
                     Text("\(point.wind.map(String.init) ?? "--") kt")
                         .font(.caption.weight(.bold))
-                        .foregroundStyle(.cyan.opacity(0.9))
+                        .foregroundStyle(intensityColor)
                         .lineLimit(1)
                         .minimumScaleFactor(0.78)
                 }
@@ -463,12 +537,14 @@ private struct TrackMap: View {
                 startPoint: .zero,
                 endPoint: CGPoint(x: size.width, y: size.height)
             ))
-
             drawGrid(context: &context, size: size)
             drawTrack(context: &context, size: size)
             drawRegion(context: &context, size: size)
+            drawLabels(context: &context, size: size)
         }
     }
+
+    // MARK: Grid
 
     private func drawGrid(context: inout GraphicsContext, size: CGSize) {
         var path = Path()
@@ -483,22 +559,74 @@ private struct TrackMap: View {
         context.stroke(path, with: .color(.white.opacity(0.12)), lineWidth: 1)
     }
 
+    // MARK: Track (color-coded + arrows + dashed forecast)
+
     private func drawTrack(context: inout GraphicsContext, size: CGSize) {
+        guard points.count > 1 else { return }
         let projected = points.map { project($0, size: size) }
-        guard projected.count > 1 else { return }
 
-        var path = Path()
-        path.move(to: projected[0])
-        projected.dropFirst().forEach { path.addLine(to: $0) }
-        context.stroke(path, with: .color(Color(hex: 0xF7E7A4)), lineWidth: 4)
+        // Draw segments between consecutive points
+        for i in 0..<(points.count - 1) {
+            let from = projected[i]
+            let to   = projected[i + 1]
+            let segColor = points[i].intensity.color
+            let isForecastSeg = points[i].isForecast || points[i + 1].isForecast
 
-        for (index, point) in projected.enumerated() {
-            let circle = Path(ellipseIn: CGRect(x: point.x - 6, y: point.y - 6, width: 12, height: 12))
-            let fill = index >= projected.count - 3 ? Color(hex: 0xFF6A4A) : Color(hex: 0x74D1C6)
-            context.fill(circle, with: .color(fill))
+            var segPath = Path()
+            segPath.move(to: from)
+            segPath.addLine(to: to)
+
+            if isForecastSeg {
+                // Dashed line for forecast
+                context.stroke(
+                    segPath,
+                    with: .color(segColor.opacity(0.85)),
+                    style: StrokeStyle(lineWidth: 3, dash: [6, 4])
+                )
+            } else {
+                context.stroke(
+                    segPath,
+                    with: .color(segColor),
+                    style: StrokeStyle(lineWidth: 4)
+                )
+            }
+
+            // Draw arrowhead at midpoint
+            let mid = CGPoint(x: (from.x + to.x) / 2, y: (from.y + to.y) / 2)
+            drawArrow(context: &context, at: mid, from: from, to: to, color: segColor)
+        }
+
+        // Draw dots for each point
+        for (i, pt) in projected.enumerated() {
+            let radius: CGFloat = points[i].isForecast ? 4.5 : 6
+            let circle = Path(ellipseIn: CGRect(
+                x: pt.x - radius, y: pt.y - radius,
+                width: radius * 2, height: radius * 2
+            ))
+            context.fill(circle, with: .color(points[i].intensity.color))
             context.stroke(circle, with: .color(.white.opacity(0.9)), lineWidth: 1.5)
         }
     }
+
+    private func drawArrow(context: inout GraphicsContext, at mid: CGPoint, from: CGPoint, to: CGPoint, color: Color) {
+        let dx = to.x - from.x
+        let dy = to.y - from.y
+        let len = sqrt(dx * dx + dy * dy)
+        guard len > 8 else { return }
+        let ux = dx / len, uy = dy / len
+        let px = -uy, py = ux          // perpendicular
+        let aLen: CGFloat = 6
+        let aWidth: CGFloat = 4
+
+        var arrow = Path()
+        arrow.move(to: CGPoint(x: mid.x + ux * aLen, y: mid.y + uy * aLen))
+        arrow.addLine(to: CGPoint(x: mid.x - ux * aLen + px * aWidth, y: mid.y - uy * aLen + py * aWidth))
+        arrow.addLine(to: CGPoint(x: mid.x - ux * aLen - px * aWidth, y: mid.y - uy * aLen - py * aWidth))
+        arrow.closeSubpath()
+        context.fill(arrow, with: .color(color))
+    }
+
+    // MARK: Region marker
 
     private func drawRegion(context: inout GraphicsContext, size: CGSize) {
         let p = project(latitude: region.latitude, longitude: region.longitude, size: size)
@@ -506,6 +634,25 @@ private struct TrackMap: View {
         context.fill(marker, with: .color(.white))
         context.stroke(marker, with: .color(Color(hex: 0xFF6A4A)), lineWidth: 3)
     }
+
+    // MARK: Inline labels (N/S compass hints)
+
+    private func drawLabels(context: inout GraphicsContext, size: CGSize) {
+        context.draw(
+            Text(Lang.pick("北", "N"))
+                .font(.system(size: 9, weight: .bold))
+                .foregroundStyle(Color.white.opacity(0.45)),
+            at: CGPoint(x: 10, y: 10)
+        )
+        context.draw(
+            Text(Lang.pick("南", "S"))
+                .font(.system(size: 9, weight: .bold))
+                .foregroundStyle(Color.white.opacity(0.45)),
+            at: CGPoint(x: 10, y: size.height - 10)
+        )
+    }
+
+    // MARK: Projection
 
     private func project(_ point: TyphoonPoint, size: CGSize) -> CGPoint {
         project(latitude: point.latitude, longitude: point.longitude, size: size)
@@ -568,14 +715,20 @@ private struct CompactPanel<Content: View>: View {
 private struct MetricTile: View {
     let title: String
     let value: String
+    var helpTopic: HelpTopic? = nil
 
     var body: some View {
         VStack(alignment: .leading, spacing: 4) {
-            Text(title)
-                .font(.caption2.weight(.bold))
-                .foregroundStyle(.white.opacity(0.58))
-                .lineLimit(1)
-                .minimumScaleFactor(0.78)
+            HStack(spacing: 4) {
+                Text(title)
+                    .font(.caption2.weight(.bold))
+                    .foregroundStyle(.white.opacity(0.58))
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.78)
+                if let topic = helpTopic {
+                    HelpButton(topic: topic)
+                }
+            }
             Text(value)
                 .font(.subheadline.weight(.black))
                 .foregroundStyle(.white)
@@ -590,23 +743,203 @@ private struct MetricTile: View {
     }
 }
 
+// MARK: - Help system
+
+enum HelpTopic {
+    case windSpeed
+    case pressure
+    case categories
+    case trackMap
+
+    var title: String {
+        switch self {
+        case .windSpeed:  return Lang.pick("風速の目安", "Wind Speed Guide")
+        case .pressure:   return Lang.pick("気圧の目安", "Pressure Guide")
+        case .categories: return Lang.pick("台風の種類", "Typhoon Categories")
+        case .trackMap:   return Lang.pick("進路図の見方", "How to Read the Map")
+        }
+    }
+
+    var lines: [(icon: String, text: String)] {
+        switch self {
+        case .windSpeed:
+            return [
+                ("wind",           Lang.pick("17m/s以上 → 暴風域", "≥17 m/s → Storm force")),
+                ("tornado",        Lang.pick("25m/s以上 → 強風域", "≥25 m/s → Strong gale")),
+                ("exclamationmark.triangle.fill",
+                                   Lang.pick("30m/s → 屋根が飛ぶ可能性", "30 m/s → Roof damage risk")),
+                ("bolt.fill",      Lang.pick("45m/s → 電柱が倒れる", "45 m/s → Utility poles may fall")),
+                ("info.circle",    Lang.pick("1 kt ≒ 0.51 m/s", "1 kt ≈ 0.51 m/s"))
+            ]
+        case .pressure:
+            return [
+                ("gauge.with.dots.needle.67percent",
+                                   Lang.pick("1000hPa → 平均的な台風", "1000 hPa → Average typhoon")),
+                ("gauge.with.dots.needle.33percent",
+                                   Lang.pick("980hPa → 強い台風", "980 hPa → Strong typhoon")),
+                ("gauge.with.dots.needle.bottom.0percent",
+                                   Lang.pick("960hPa → 非常に強い台風", "960 hPa → Very strong typhoon")),
+                ("exclamationmark.3",
+                                   Lang.pick("930hPa以下 → 猛烈", "≤930 hPa → Violent typhoon")),
+                ("info.circle",    Lang.pick("数字が小さいほど強い", "Lower = stronger storm"))
+            ]
+        case .categories:
+            return [
+                ("circle.fill",    Lang.pick("熱帯低気圧 (<34kt) 緑", "Tropical Depression (<34kt) green")),
+                ("circle.fill",    Lang.pick("熱帯暴風雨 (34-63kt) 黄", "Tropical Storm (34-63kt) yellow")),
+                ("circle.fill",    Lang.pick("台風 (64-99kt) オレンジ", "Typhoon (64-99kt) orange")),
+                ("circle.fill",    Lang.pick("猛烈な台風 (≥100kt) 赤", "Super Typhoon (≥100kt) red"))
+            ]
+        case .trackMap:
+            return [
+                ("line.diagonal",  Lang.pick("実線 → 実績の進路", "Solid line → Actual track")),
+                ("line.diagonal",  Lang.pick("破線 → 予報進路", "Dashed line → Forecast track")),
+                ("arrow.up.right", Lang.pick("矢印 → 移動方向", "Arrow → Direction of movement")),
+                ("circle.fill",    Lang.pick("丸の色 → 強度", "Dot color → Intensity")),
+                ("mappin.circle",  Lang.pick("白丸 → 選択地点", "White dot → Selected location"))
+            ]
+        }
+    }
+}
+
+private struct HelpButton: View {
+    let topic: HelpTopic
+    @State private var showSheet = false
+
+    var body: some View {
+        Button {
+            showSheet = true
+        } label: {
+            Image(systemName: "questionmark.circle")
+                .font(.caption2.weight(.bold))
+                .foregroundStyle(.cyan.opacity(0.75))
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(topic.title)
+        .sheet(isPresented: $showSheet) {
+            HelpSheet(topic: topic)
+        }
+    }
+}
+
+private struct HelpSheet: View {
+    let topic: HelpTopic
+    @Environment(\.dismiss) private var dismiss
+
+    var body: some View {
+        NavigationStack {
+            ZStack {
+                Color(hex: 0x061F27).ignoresSafeArea()
+                ScrollView {
+                    VStack(alignment: .leading, spacing: 14) {
+                        ForEach(Array(topic.lines.enumerated()), id: \.offset) { _, line in
+                            HStack(alignment: .top, spacing: 12) {
+                                Image(systemName: line.icon)
+                                    .font(.body.weight(.bold))
+                                    .foregroundStyle(.cyan)
+                                    .frame(width: 24)
+                                Text(line.text)
+                                    .font(.body)
+                                    .foregroundStyle(.white.opacity(0.88))
+                                    .fixedSize(horizontal: false, vertical: true)
+                            }
+                            .padding(.horizontal, 20)
+                        }
+                    }
+                    .padding(.vertical, 20)
+                }
+            }
+            .navigationTitle(topic.title)
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .confirmationAction) {
+                    Button(Lang.pick("閉じる", "Close")) { dismiss() }
+                        .foregroundStyle(.cyan)
+                }
+            }
+        }
+        .preferredColorScheme(.dark)
+    }
+}
+
+// MARK: - Track legend
+
+private struct TrackLegendView: View {
+    let metrics: LayoutMetrics
+
+    private let items: [(color: Color, label: String, style: String)] = [
+        (TyphoonIntensity.tropicalDepression.color, TyphoonIntensity.tropicalDepression.label, Lang.pick("実線", "Solid")),
+        (TyphoonIntensity.tropicalStorm.color,      TyphoonIntensity.tropicalStorm.label,      Lang.pick("実線", "Solid")),
+        (TyphoonIntensity.typhoon.color,            TyphoonIntensity.typhoon.label,            Lang.pick("実線", "Solid")),
+        (TyphoonIntensity.superTyphoon.color,       TyphoonIntensity.superTyphoon.label,       Lang.pick("実線", "Solid"))
+    ]
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            HStack {
+                Text(Lang.pick("凡例", "Legend"))
+                    .font(.caption2.weight(.black))
+                    .foregroundStyle(.white.opacity(0.6))
+                Spacer(minLength: 0)
+                // Forecast vs actual hint
+                HStack(spacing: 4) {
+                    // Solid line sample
+                    Rectangle()
+                        .fill(Color.white.opacity(0.6))
+                        .frame(width: 16, height: 2)
+                    Text(Lang.pick("実績", "Actual"))
+                        .font(.caption2)
+                        .foregroundStyle(.white.opacity(0.55))
+                    // Dashed line sample
+                    dashedLineSample
+                    Text(Lang.pick("予報", "Forecast"))
+                        .font(.caption2)
+                        .foregroundStyle(.white.opacity(0.55))
+                }
+            }
+
+            let columns = metrics.isNarrow
+                ? [GridItem(.flexible(), spacing: 6), GridItem(.flexible(), spacing: 6)]
+                : Array(repeating: GridItem(.flexible(), spacing: 6), count: 4)
+
+            LazyVGrid(columns: columns, spacing: 6) {
+                ForEach(items, id: \.label) { item in
+                    HStack(spacing: 5) {
+                        Circle()
+                            .fill(item.color)
+                            .frame(width: 8, height: 8)
+                        Text(item.label)
+                            .font(.caption2.weight(.bold))
+                            .foregroundStyle(.white.opacity(0.78))
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.7)
+                    }
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                }
+            }
+        }
+        .padding(8)
+        .background(Color.white.opacity(0.06), in: RoundedRectangle(cornerRadius: 8))
+    }
+
+    private var dashedLineSample: some View {
+        HStack(spacing: 2) {
+            ForEach(0..<3, id: \.self) { _ in
+                Rectangle()
+                    .fill(Color.white.opacity(0.6))
+                    .frame(width: 4, height: 2)
+            }
+        }
+    }
+}
+
 private extension Date {
     var compactTime: String {
         formatted(.dateTime.month(.twoDigits).day(.twoDigits).hour(.twoDigits(amPM: .omitted)).minute(.twoDigits))
     }
 }
 
-private extension Color {
-    init(hex: UInt, alpha: Double = 1) {
-        self.init(
-            .sRGB,
-            red: Double((hex >> 16) & 0xff) / 255,
-            green: Double((hex >> 8) & 0xff) / 255,
-            blue: Double(hex & 0xff) / 255,
-            opacity: alpha
-        )
-    }
-}
+// Color(hex:) is defined in Models.swift
 
 #Preview("iPhone SE") {
     ContentView()
